@@ -63,6 +63,7 @@ export default function Dashboard() {
   const [showPeriodMenu, setShowPeriodMenu] = useState(false);
   const [expandedFilterYears, setExpandedFilterYears] = useState(new Set());
   const [periodMenuPos, setPeriodMenuPos] = useState({ top: 0, right: 0 });
+  const [hoveredBar, setHoveredBar] = useState(null);
   const [loadingState, setLoadingState] = useState('loading');
 
   const inflowFileInputRef = useRef(null);
@@ -602,7 +603,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3 h-[28vh] md:h-[32vh] shrink-0" style={{overflow: 'visible'}}>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3 h-[28vh] md:h-[32vh] shrink-0 relative z-10" style={{overflow: 'visible'}}>
             <div className="md:col-span-4 panel-3d rounded-xl p-2 md:p-3 flex flex-col h-full overflow-hidden">
               <h2 className="text-xs md:text-sm font-semibold text-slate-300 mb-1.5 shrink-0 flex items-center gap-2 drop-shadow-sm">
                 <Filter className="w-3 h-3 md:w-4 md:h-4 text-blue-500" /> Category Breakdown <span className="text-blue-400 font-bold text-[10px] md:text-xs">{filterLabel}</span>
@@ -663,9 +664,22 @@ export default function Dashboard() {
             </div>
 
             <div className="md:col-span-4 bg-[#121f42] rounded-xl p-2 md:p-3 flex flex-col h-full overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),_0_5px_15px_rgba(0,0,0,0.5)] border border-white/5">
-              <h2 className="text-xs md:text-sm font-semibold text-slate-300 mb-1.5 shrink-0 flex items-center gap-2 drop-shadow-sm">
-                <PieChart className="w-3 h-3 md:w-4 md:h-4 text-purple-400" /> Distribution <span className="text-purple-300 font-bold text-[10px] md:text-xs">{filterLabel}</span>
-              </h2>
+              <div className="flex items-center justify-between shrink-0 mb-1.5 relative">
+                <h2 className="text-xs md:text-sm font-semibold text-slate-300 flex items-center gap-2 drop-shadow-sm">
+                  <PieChart className="w-3 h-3 md:w-4 md:h-4 text-purple-400" /> Distribution <span className="text-purple-300 font-bold text-[10px] md:text-xs">{filterLabel}</span>
+                </h2>
+                {(hoveredPieSlice || activePieSlice) && (() => {
+                  const legendItem = donutData.legend.find(l => l.name === (hoveredPieSlice || activePieSlice));
+                  if (!legendItem) return null;
+                  return (
+                    <div className="absolute right-0 top-0 flex items-center gap-1.5 bg-black/80 px-2 py-1 rounded-md border border-white/10 z-20 shadow-lg">
+                      <span className="text-slate-200 text-[10px] font-medium">{legendItem.name}</span>
+                      <span className="text-white text-[11px] font-bold font-mono">{formatCurrency(legendItem.amount)}</span>
+                      <span className="text-[10px] font-bold" style={{color: legendItem.color}}>{legendItem.percent.toFixed(1)}%</span>
+                    </div>
+                  );
+                })()}
+              </div>
               <div className="flex-1 flex flex-row items-center justify-center min-h-0 relative py-1 md:py-2">
                 {donutData.legend.length > 0 ? (
                   <>
@@ -686,23 +700,10 @@ export default function Dashboard() {
                           return <path key={idx} d={pathData} fill={slice.color} transform={transform} onClick={() => setActivePieSlice(isActive ? null : slice.name)} onMouseEnter={() => setHoveredPieSlice(slice.name)} onMouseLeave={() => setHoveredPieSlice(null)} className="cursor-pointer transition-all duration-300 ease-out outline-none" style={{ stroke: '#0a1128', strokeWidth: 1.5, opacity: isHovered ? 0.85 : 1 }} />;
                         })}
                       </svg>
-                      {hoveredPieSlice && (() => {
-                        const legendItem = donutData.legend.find(l => l.name === hoveredPieSlice);
-                        if (!legendItem) return null;
-                        return (
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="bg-black/90 border border-white/15 rounded-lg px-3 py-2 text-center shadow-xl">
-                              <div className="text-[11px] font-semibold text-slate-100">{legendItem.name}</div>
-                              <div className="text-[11px] text-slate-300 font-mono mt-0.5">{formatCurrency(legendItem.amount)}</div>
-                              <div className="text-[11px] font-bold mt-0.5" style={{color: legendItem.color}}>{legendItem.percent.toFixed(1)}%</div>
-                            </div>
-                          </div>
-                        );
-                      })()}
                     </div>
                     <div className="ml-2 md:ml-4 flex-1 overflow-y-auto custom-scrollbar space-y-1 pr-1 max-h-full">
                       {donutData.legend.map((item, idx) => (
-                        <div key={idx} className={`flex items-center justify-between gap-1.5 p-1 rounded-md cursor-pointer transition-all duration-200 ${activePieSlice === item.name ? 'bg-white/10' : 'hover:bg-white/5'}`} onClick={() => setActivePieSlice(item.name)}>
+                        <div key={idx} className={`flex items-center justify-between gap-1.5 p-1 rounded-md cursor-pointer transition-all duration-200 ${activePieSlice === item.name ? 'bg-white/10' : 'hover:bg-white/5'}`} onClick={() => setActivePieSlice(activePieSlice === item.name ? null : item.name)}>
                           <div className="flex items-center gap-1.5 overflow-hidden">
                             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }}></div>
                             <div className="truncate text-[9px] md:text-[10px] text-slate-300">{item.name}</div>
@@ -719,10 +720,16 @@ export default function Dashboard() {
             </div>
 
             <div className="md:col-span-4 panel-3d rounded-xl p-2 md:p-3 flex flex-col h-full relative" style={{overflow: 'visible'}}>
-              <div className="flex items-center justify-between shrink-0 mb-1">
+              <div className="flex items-center justify-between shrink-0 mb-1 relative">
                 <h2 className="text-xs md:text-sm font-semibold text-slate-300 flex items-center gap-2 drop-shadow-sm">
                   <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-emerald-400" /> Monthly Trend <span className="text-emerald-300 font-bold text-[10px] md:text-xs">{filterLabel}</span>
                 </h2>
+                {hoveredBar && (
+                  <div className="absolute right-0 top-0 flex items-center gap-1.5 bg-black/80 px-2 py-1 rounded-md border border-white/10 z-20 shadow-lg">
+                    <span className="text-slate-300 text-[10px] font-medium">{hoveredBar.month}</span>
+                    <span className="text-white text-[11px] font-bold font-mono">{formatCurrency(hoveredBar.amount)}</span>
+                  </div>
+                )}
               </div>
               <div className="flex-1 flex min-h-0 mt-1" style={{overflow: 'visible'}}>
                 {(() => {
@@ -764,11 +771,16 @@ export default function Dashboard() {
                         if (activeFilter === 'LEAKAGE') barGradient = 'from-amber-400 to-amber-600';
 
                         return (
-                          <div key={i} className={`relative flex flex-col items-center group h-full justify-end ${monthlyTrendData.data.length > 12 ? '' : 'flex-1 min-w-0'}`} style={monthlyTrendData.data.length > 12 ? { width: '28px', flexShrink: 0 } : {}}>
-                            <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black/90 text-white text-[11px] py-1.5 px-3 rounded-md pointer-events-none whitespace-nowrap z-30 transition-opacity border border-white/10 shadow-xl flex flex-col items-center">
-                              <span className="text-slate-300 font-medium text-[10px]">{d.month}</span>
-                              <span className="font-bold font-mono">{formatCurrency(d.amount)}</span>
-                            </div>
+                          <div
+                            key={i}
+                            className={`relative flex flex-col items-center h-full justify-end ${monthlyTrendData.data.length > 12 ? '' : 'flex-1 min-w-0'}`}
+                            style={monthlyTrendData.data.length > 12 ? { width: '28px', flexShrink: 0 } : {}}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setHoveredBar({ month: d.month, amount: d.amount, x: rect.left + rect.width / 2, y: rect.top });
+                            }}
+                            onMouseLeave={() => setHoveredBar(null)}
+                          >
                             <div
                               className={`w-full max-w-[22px] bg-gradient-to-t ${barGradient} rounded-t-sm transition-all duration-700 ease-out border-t border-white/20`}
                               style={{ height: `${Math.max(heightPercent, 2)}%` }}
