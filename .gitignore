@@ -1,3 +1,5 @@
 node_modules
 dist
 .vercel
+Credentials.json
+server/config.json
