@@ -11,8 +11,8 @@ export async function GET() {
       sheets.spreadsheets.values.get({ spreadsheetId, range: 'Outflow!A1:AZ100' }),
     ]);
 
-    const inflow = parseSheetToData(inflowRes.data.values);
-    const outflow = parseSheetToData(outflowRes.data.values);
+    const inflow = parseSheetToData(inflowRes.data.values, 'inflow');
+    const outflow = parseSheetToData(outflowRes.data.values, 'outflow');
 
     const periods = inflow.periods.length > 0 ? inflow.periods : outflow.periods;
     const revenue = inflow.categories;

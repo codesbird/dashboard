@@ -35,6 +35,9 @@ const getCategoryIcon = (category) => {
     case 'Booking Advances': return <Wallet className="w-4 h-4" />;
     case 'Installments (Linked)': return <Building2 className="w-4 h-4" />;
     case 'Final Settlements': return <Landmark className="w-4 h-4" />;
+    case 'Site Expenses': return <Building2 className="w-4 h-4" />;
+    case 'Office Exp.': return <Briefcase className="w-4 h-4" />;
+    case 'Other': return <Database className="w-4 h-4" />;
     default: return <Database className="w-4 h-4" />;
   }
 };
