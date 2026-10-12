@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = '';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', {
@@ -43,6 +43,7 @@ const TAB_MAP = { inflow: 'INFLOW', outflow: 'OUTFLOW', refund: 'LEAKAGE', net: 
 const TAB_REVERSE = Object.fromEntries(Object.entries(TAB_MAP).map(([k, v]) => [v, k]));
 
 function getInitialTab() {
+  if (typeof window === 'undefined') return 'INFLOW';
   const params = new URLSearchParams(window.location.search);
   const tab = params.get('tab');
   return (tab && TAB_MAP[tab]) || 'INFLOW';

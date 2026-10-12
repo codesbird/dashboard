@@ -1,5 +1,6 @@
 node_modules
 dist
+.next
 .vercel
 Credentials.json
 server/config.json
