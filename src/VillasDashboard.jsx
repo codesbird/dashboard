@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Building2, Activity, RefreshCw, Database, Search, Home,
   Users, TrendingUp, AlertTriangle, CheckCircle, XCircle,
   ChevronDown, ChevronUp, ArrowUpRight, BarChart3, Target,
-  Link2, DollarSign, PieChart, Filter
+  Link2, DollarSign, PieChart, Filter, Download, Upload
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const API_BASE = '';
 
@@ -66,7 +67,78 @@ export default function VillasDashboard({ onViewChange }) {
     }
   }, []);
 
+  const fileInputRef = useRef(null);
+
   useEffect(() => { fetchData(false); }, [fetchData]);
+
+  const downloadTemplate = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/villas/template`);
+      if (!response.ok) throw new Error('Failed to download template');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'heritage_villas_template.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Template download failed:', error);
+      alert('Failed to download template. Make sure the server is running.');
+    }
+  };
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const data = new Uint8Array(event.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const allRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+      const dataRows = allRows.slice(1).filter(row => row.length >= 1 && String(row[0]).trim());
+      const cleanRows = dataRows.map(row =>
+        row.map(cell => {
+          if (cell === '' || cell == null) return '';
+          const num = Number(cell);
+          return isNaN(num) ? String(cell).trim() : num;
+        })
+      );
+
+      if (cleanRows.length === 0) {
+        alert('No data rows found. Please add entries below the header row.');
+        return;
+      }
+
+      try {
+        setIsFetching(true);
+        const response = await fetch(`${API_BASE}/api/villas/append`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: cleanRows }),
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Upload failed');
+        }
+        const result = await response.json();
+        await fetchData();
+        alert(`${result.added} new villa(s) added to the Villas sheet.`);
+      } catch (error) {
+        console.error('Failed to upload villas:', error);
+        alert(`Failed to upload: ${error.message}`);
+      } finally {
+        setIsFetching(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = null;
+  };
 
   const stats = useMemo(() => {
     const sold = villas.filter(v => v.isSold);
@@ -171,7 +243,7 @@ export default function VillasDashboard({ onViewChange }) {
             <span className="text-emerald-500 text-[10px] ml-1">● Live</span>
           </p>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-col md:flex-row gap-2 items-center">
           <div className="flex rounded-lg overflow-hidden border border-white/10">
             <button onClick={() => onViewChange('financial')} className="px-3 py-1.5 text-xs font-semibold transition-colors text-slate-400 hover:text-white hover:bg-white/5">
               <BarChart3 className="w-3.5 h-3.5 inline mr-1.5" />Financials
@@ -180,9 +252,18 @@ export default function VillasDashboard({ onViewChange }) {
               <Home className="w-3.5 h-3.5 inline mr-1.5" />Villas
             </button>
           </div>
-          <button onClick={() => fetchData()} disabled={isFetching} className={`flex items-center gap-1.5 px-3 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold rounded-md transition-all btn-3d text-purple-400 hover:text-purple-300 ${isFetching ? 'opacity-50 cursor-not-allowed' : ''}`}>
-            {isFetching ? <RefreshCw className="w-3 h-3 md:w-4 md:h-4 animate-spin" /> : <Link2 className="w-3 h-3 md:w-4 md:h-4" />} Sync
-          </button>
+          <div className="flex gap-2">
+            <input type="file" accept=".xlsx,.csv" ref={fileInputRef} onChange={handleUpload} className="hidden" />
+            <button onClick={downloadTemplate} className="flex items-center justify-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold rounded-md transition-all btn-3d text-cyan-400 hover:text-cyan-300">
+              <Download className="w-3 h-3 md:w-4 md:h-4 shrink-0" /> <span className="whitespace-nowrap">Template</span>
+            </button>
+            <button onClick={() => fileInputRef.current.click()} className="flex items-center justify-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold rounded-md transition-all btn-3d text-cyan-400 hover:text-cyan-300">
+              <Upload className="w-3 h-3 md:w-4 md:h-4 shrink-0" /> <span className="whitespace-nowrap">Add Villas</span>
+            </button>
+            <button onClick={() => fetchData()} disabled={isFetching} className={`flex items-center gap-1.5 px-3 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold rounded-md transition-all btn-3d text-purple-400 hover:text-purple-300 ${isFetching ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              {isFetching ? <RefreshCw className="w-3 h-3 md:w-4 md:h-4 animate-spin" /> : <Link2 className="w-3 h-3 md:w-4 md:h-4" />} Sync
+            </button>
+          </div>
         </div>
       </header>
 
@@ -241,7 +322,7 @@ export default function VillasDashboard({ onViewChange }) {
       {/* MIDDLE ROW: Villa Map | Donut | Follow-ups */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3">
         {/* Villa Map */}
-        <div className="md:col-span-5 panel-3d rounded-xl p-2 md:p-3 flex flex-col max-h-[420px] overflow-hidden">
+        <div className="md:col-span-5 panel-3d rounded-xl p-2 md:p-3 flex flex-col max-h-[380px] overflow-hidden relative">
           <h2 className="text-xs md:text-sm font-semibold text-slate-300 mb-1.5 shrink-0 flex items-center gap-2 drop-shadow-sm">
             <Home className="w-3 h-3 md:w-4 md:h-4 text-blue-500" /> Villa Map
             <span className="text-[9px] text-slate-500 font-normal ml-auto flex gap-2">
@@ -251,7 +332,7 @@ export default function VillasDashboard({ onViewChange }) {
               })}
             </span>
           </h2>
-          <div className="flex-1 grid grid-cols-12 gap-1 md:gap-1.5 auto-rows-min content-start overflow-y-auto custom-scrollbar pr-1 relative">
+          <div className="flex-1 grid grid-cols-12 gap-1 md:gap-1.5 auto-rows-min content-start overflow-y-auto custom-scrollbar pr-1">
             {villas.map((villa) => {
               const status = getPaymentStatus(villa);
               const sc = getStatusColor(status);
@@ -274,7 +355,7 @@ export default function VillasDashboard({ onViewChange }) {
             if (!v) return null;
             const pct = v.atsValue > 0 ? ((v.received / v.atsValue) * 100).toFixed(1) : 0;
             return (
-              <div className="mt-1.5 shrink-0 bg-[#0a0f1c] rounded-lg px-2.5 py-1.5 border border-white/10 text-[10px] shadow-[3px_3px_6px_#06090f,-3px_-3px_6px_#1c2941]">
+              <div className="absolute bottom-2 left-2 right-2 z-20 bg-[#0a0f1c]/95 backdrop-blur-sm rounded-lg px-2.5 py-1.5 border border-white/10 text-[10px] shadow-[3px_3px_6px_#06090f,-3px_-3px_6px_#1c2941]">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-white">{v.villaNo}</span>
                   <span className={`font-bold ${getStatusColor(getPaymentStatus(v)).text}`}>{v.isSold ? `${pct}% paid` : 'Available'}</span>
@@ -305,7 +386,7 @@ export default function VillasDashboard({ onViewChange }) {
             )}
           </div>
           <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-            <div className="relative w-44 h-44 md:w-60 md:h-60">
+            <div className="relative w-40 h-40 md:w-52 md:h-52">
               <svg viewBox="-10 -10 120 120" className="w-full h-full overflow-visible drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
                 {donutSlices.map((slice, idx) => {
                   const getCoords = (p) => [Math.cos(2 * Math.PI * (p - 0.25)), Math.sin(2 * Math.PI * (p - 0.25))];
@@ -354,11 +435,11 @@ export default function VillasDashboard({ onViewChange }) {
         </div>
 
         {/* Priority Follow-ups */}
-        <div className="md:col-span-4 panel-3d rounded-xl p-2 md:p-3 flex flex-col max-h-[420px] overflow-hidden">
+        <div className="md:col-span-4 panel-3d rounded-xl p-2 md:p-3 flex flex-col max-h-[380px] overflow-hidden">
           <h2 className="text-xs md:text-sm font-semibold text-slate-300 mb-1.5 shrink-0 flex items-center gap-2 drop-shadow-sm">
             <AlertTriangle className="w-3 h-3 md:w-4 md:h-4 text-amber-400" /> Priority Follow-ups
           </h2>
-          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+          <div className="flex-1 overflow-y-auto custom-scrollbar smooth-scroll space-y-1.5 pr-1">
             {stats.topOutstanding.map((v, idx) => {
               const pct = v.atsValue > 0 ? (v.received / v.atsValue) * 100 : 0;
               const status = getPaymentStatus(v);
@@ -405,7 +486,7 @@ export default function VillasDashboard({ onViewChange }) {
       </div>
 
       {/* CLIENT TABLE */}
-      <div className="panel-3d rounded-xl flex flex-col overflow-hidden" style={{ maxHeight: '500px' }}>
+      <div className="panel-3d rounded-xl flex flex-col overflow-hidden" style={{ minHeight: '300px', maxHeight: '500px' }}>
         <div className="p-2 md:p-3 border-b border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-3 shrink-0">
           <h2 className="text-xs md:text-sm font-semibold text-slate-300 flex items-center gap-2">
             <Database className="w-3 h-3 md:w-4 md:h-4 text-blue-500" /> Client Collection Details
@@ -502,6 +583,7 @@ export default function VillasDashboard({ onViewChange }) {
         .panel-3d { background: linear-gradient(145deg, #162032, #0d131f); box-shadow: 5px 5px 10px #06090f, -5px -5px 10px #1c2941; border: 1px solid rgba(255, 255, 255, 0.03); }
         .btn-3d { background: linear-gradient(145deg, #162032, #0d131f); box-shadow: 2px 2px 4px #06090f, -2px -2px 4px #1c2941; }
         .btn-3d:active { box-shadow: inset 2px 2px 4px #06090f, inset -2px -2px 4px #1c2941; }
+        .smooth-scroll { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
         .progress-track-3d { background: #06090f; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8); }
         .progress-bar-3d { box-shadow: inset 0px 2px 3px rgba(255,255,255,0.3); }
         .villa-cell-3d { box-shadow: 2px 2px 4px #06090f, -1px -1px 3px rgba(28,41,65,0.4), inset 0 1px 1px rgba(255,255,255,0.1); }
