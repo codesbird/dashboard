@@ -3,7 +3,7 @@ import {
   Building2, Activity, RefreshCw, Database, Search, Home,
   Users, TrendingUp, AlertTriangle, CheckCircle, XCircle,
   ChevronDown, ChevronUp, ArrowUpRight, BarChart3, Target,
-  Link2, DollarSign, PieChart
+  Link2, DollarSign, PieChart, Filter
 } from 'lucide-react';
 
 const API_BASE = '';
@@ -48,6 +48,7 @@ export default function VillasDashboard({ onViewChange }) {
   const [sortDir, setSortDir] = useState('desc');
   const [hoveredVilla, setHoveredVilla] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [hoveredSlice, setHoveredSlice] = useState(null);
 
   const fetchData = useCallback(async (showSpinner = true) => {
     if (showSpinner) setIsFetching(true);
@@ -73,7 +74,6 @@ export default function VillasDashboard({ onViewChange }) {
     const totalAtsValue = sold.reduce((s, v) => s + v.atsValue, 0);
     const totalReceived = sold.reduce((s, v) => s + v.received, 0);
     const totalBalance = sold.reduce((s, v) => s + v.balance, 0);
-    const fullInventoryValue = villas.reduce((s, v) => s + (v.atsValue || 5100000), 0);
     const collectionRate = totalAtsValue > 0 ? (totalReceived / totalAtsValue) * 100 : 0;
 
     const statusGroups = { healthy: 0, partial: 0, low: 0, zero: 0, available: 0 };
@@ -81,12 +81,11 @@ export default function VillasDashboard({ onViewChange }) {
 
     const zeroPayment = sold.filter(v => v.received === 0);
     const topOutstanding = [...sold].sort((a, b) => b.balance - a.balance).slice(0, 5);
-    const topCollected = [...sold].sort((a, b) => (b.received / b.atsValue) - (a.received / a.atsValue)).slice(0, 5);
 
     return {
       total: villas.length, sold: sold.length, available: available.length,
-      totalAtsValue, totalReceived, totalBalance, fullInventoryValue,
-      collectionRate, statusGroups, zeroPayment, topOutstanding, topCollected
+      totalAtsValue, totalReceived, totalBalance,
+      collectionRate, statusGroups, zeroPayment, topOutstanding
     };
   }, [villas]);
 
@@ -159,6 +158,7 @@ export default function VillasDashboard({ onViewChange }) {
 
   return (
     <div className="min-h-screen w-full bg-[#0f172a] text-slate-200 font-sans p-2 md:p-3 flex flex-col overflow-x-hidden bg-3d-base">
+      {/* HEADER */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-3 shrink-0 gap-2 md:gap-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight flex items-center gap-2 drop-shadow-md">
@@ -180,67 +180,70 @@ export default function VillasDashboard({ onViewChange }) {
               <Home className="w-3.5 h-3.5 inline mr-1.5" />Villas
             </button>
           </div>
-          <button onClick={() => fetchData()} disabled={isFetching} className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] md:text-xs font-semibold rounded-md transition-all btn-3d text-purple-400 hover:text-purple-300 ${isFetching ? 'opacity-50 cursor-not-allowed' : ''}`}>
+          <button onClick={() => fetchData()} disabled={isFetching} className={`flex items-center gap-1.5 px-3 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold rounded-md transition-all btn-3d text-purple-400 hover:text-purple-300 ${isFetching ? 'opacity-50 cursor-not-allowed' : ''}`}>
             {isFetching ? <RefreshCw className="w-3 h-3 md:w-4 md:h-4 animate-spin" /> : <Link2 className="w-3 h-3 md:w-4 md:h-4" />} Sync
           </button>
         </div>
       </header>
 
+      {/* KPI CARDS */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3 mb-3 shrink-0">
-        <div className="panel-3d rounded-xl p-2.5 md:p-3">
+        <div className="panel-3d rounded-xl p-3 md:p-4">
           <div className="flex justify-between items-start mb-1">
-            <span className="text-slate-400 text-[10px] md:text-xs font-medium">Total Inventory</span>
-            <Home className="w-4 h-4 text-blue-400" />
+            <span className="text-slate-400 text-xs md:text-sm font-medium">Total Inventory</span>
+            <Home className="w-4 h-4 md:w-5 md:h-5 text-blue-400 drop-shadow-[0_0_5px_rgba(96,165,250,0.5)]" />
           </div>
-          <h3 className="text-lg md:text-xl font-bold font-mono text-white">{stats.total}</h3>
-          <p className="text-[9px] text-slate-500 mt-0.5">Villas</p>
+          <h3 className="text-lg md:text-2xl font-bold font-mono tracking-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-white">{stats.total}</h3>
+          <p className="text-[10px] text-slate-500 mt-0.5">Villas</p>
         </div>
-        <div className="panel-3d rounded-xl p-2.5 md:p-3">
+        <div className="panel-3d rounded-xl p-3 md:p-4">
           <div className="flex justify-between items-start mb-1">
-            <span className="text-slate-400 text-[10px] md:text-xs font-medium">Sold</span>
-            <CheckCircle className="w-4 h-4 text-emerald-400" />
+            <span className="text-slate-400 text-xs md:text-sm font-medium">Sold</span>
+            <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-emerald-400 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
           </div>
-          <h3 className="text-lg md:text-xl font-bold font-mono text-emerald-400">{stats.sold}</h3>
-          <p className="text-[9px] text-emerald-500/70 mt-0.5">{stats.total > 0 ? ((stats.sold / stats.total) * 100).toFixed(0) : 0}% sold</p>
+          <h3 className="text-lg md:text-2xl font-bold font-mono tracking-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-emerald-400">{stats.sold}</h3>
+          <p className="text-[10px] text-emerald-500/70 mt-0.5">{stats.total > 0 ? ((stats.sold / stats.total) * 100).toFixed(0) : 0}% sold</p>
         </div>
-        <div className="panel-3d rounded-xl p-2.5 md:p-3">
+        <div className="panel-3d rounded-xl p-3 md:p-4">
           <div className="flex justify-between items-start mb-1">
-            <span className="text-slate-400 text-[10px] md:text-xs font-medium">Available</span>
-            <Target className="w-4 h-4 text-cyan-400" />
+            <span className="text-slate-400 text-xs md:text-sm font-medium">Available</span>
+            <Target className="w-4 h-4 md:w-5 md:h-5 text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]" />
           </div>
-          <h3 className="text-lg md:text-xl font-bold font-mono text-cyan-400">{stats.available}</h3>
-          <p className="text-[9px] text-cyan-500/70 mt-0.5">{formatCompactCurrency(stats.available * 5100000)} potential</p>
+          <h3 className="text-lg md:text-2xl font-bold font-mono tracking-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-cyan-400">{stats.available}</h3>
+          <p className="text-[10px] text-cyan-500/70 mt-0.5">{formatCompactCurrency(stats.available * 5100000)} potential</p>
         </div>
-        <div className="panel-3d rounded-xl p-2.5 md:p-3">
+        <div className="panel-3d rounded-xl p-3 md:p-4">
           <div className="flex justify-between items-start mb-1">
-            <span className="text-slate-400 text-[10px] md:text-xs font-medium">Sales Value</span>
-            <DollarSign className="w-4 h-4 text-violet-400" />
+            <span className="text-slate-400 text-xs md:text-sm font-medium">Sales Value</span>
+            <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-violet-400 drop-shadow-[0_0_5px_rgba(167,139,250,0.5)]" />
           </div>
-          <h3 className="text-lg md:text-xl font-bold font-mono text-violet-400">{formatCompactCurrency(stats.totalAtsValue)}</h3>
-          <p className="text-[9px] text-slate-500 mt-0.5">of sold units</p>
+          <h3 className="text-lg md:text-2xl font-bold font-mono tracking-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-violet-400">{formatCompactCurrency(stats.totalAtsValue)}</h3>
+          <p className="text-[10px] text-slate-500 mt-0.5">of sold units</p>
         </div>
-        <div className="panel-3d rounded-xl p-2.5 md:p-3">
+        <div className="panel-3d rounded-xl p-3 md:p-4">
           <div className="flex justify-between items-start mb-1">
-            <span className="text-slate-400 text-[10px] md:text-xs font-medium">Collected</span>
-            <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+            <span className="text-slate-400 text-xs md:text-sm font-medium">Collected</span>
+            <ArrowUpRight className="w-4 h-4 md:w-5 md:h-5 text-emerald-400 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
           </div>
-          <h3 className="text-lg md:text-xl font-bold font-mono text-emerald-400">{formatCompactCurrency(stats.totalReceived)}</h3>
-          <p className="text-[9px] text-emerald-500/70 mt-0.5">{stats.collectionRate.toFixed(1)}% rate</p>
+          <h3 className="text-lg md:text-2xl font-bold font-mono tracking-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-emerald-400">{formatCompactCurrency(stats.totalReceived)}</h3>
+          <p className="text-[10px] text-emerald-500/70 mt-0.5">{stats.collectionRate.toFixed(1)}% rate</p>
         </div>
-        <div className="panel-3d rounded-xl p-2.5 md:p-3">
+        <div className="panel-3d rounded-xl p-3 md:p-4">
           <div className="flex justify-between items-start mb-1">
-            <span className="text-slate-400 text-[10px] md:text-xs font-medium">Outstanding</span>
-            <AlertTriangle className="w-4 h-4 text-rose-400" />
+            <span className="text-slate-400 text-xs md:text-sm font-medium">Outstanding</span>
+            <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-rose-400 drop-shadow-[0_0_5px_rgba(244,63,94,0.5)]" />
           </div>
-          <h3 className="text-lg md:text-xl font-bold font-mono text-rose-400">{formatCompactCurrency(stats.totalBalance)}</h3>
-          <p className="text-[9px] text-rose-500/70 mt-0.5">{stats.zeroPayment.length} zero-pay clients</p>
+          <h3 className="text-lg md:text-2xl font-bold font-mono tracking-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-rose-400">{formatCompactCurrency(stats.totalBalance)}</h3>
+          <p className="text-[10px] text-rose-500/70 mt-0.5">{stats.zeroPayment.length} zero-pay clients</p>
         </div>
       </div>
 
+      {/* MIDDLE ROW: Villa Map | Donut | Follow-ups */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3">
+        {/* Villa Map */}
         <div className="md:col-span-5 panel-3d rounded-xl p-2 md:p-3 flex flex-col max-h-[420px] overflow-hidden">
-          <h2 className="text-xs md:text-sm font-semibold text-slate-300 mb-2 shrink-0 flex items-center gap-2">
-            <Home className="w-3.5 h-3.5 text-blue-400" /> Villa Map
+          <h2 className="text-xs md:text-sm font-semibold text-slate-300 mb-1.5 shrink-0 flex items-center gap-2 drop-shadow-sm">
+            <Home className="w-3 h-3 md:w-4 md:h-4 text-blue-500" /> Villa Map
             <span className="text-[9px] text-slate-500 font-normal ml-auto flex gap-2">
               {Object.entries(stats.statusGroups).filter(([,c]) => c > 0).map(([status, count]) => {
                 const sc = getStatusColor(status);
@@ -248,22 +251,20 @@ export default function VillasDashboard({ onViewChange }) {
               })}
             </span>
           </h2>
-          <div className="flex-1 grid grid-cols-12 gap-0.5 md:gap-1 auto-rows-min content-start overflow-y-auto custom-scrollbar pr-1 relative">
+          <div className="flex-1 grid grid-cols-12 gap-1 md:gap-1.5 auto-rows-min content-start overflow-y-auto custom-scrollbar pr-1 relative">
             {villas.map((villa) => {
               const status = getPaymentStatus(villa);
               const sc = getStatusColor(status);
-              const pct = villa.atsValue > 0 ? ((villa.received / villa.atsValue) * 100).toFixed(0) : 0;
               const isHovered = hoveredVilla === villa.srNo;
-
               return (
                 <div
                   key={villa.srNo}
-                  className={`relative rounded-sm cursor-pointer transition-all duration-200 flex items-center justify-center ${sc.bg} ${isHovered ? `ring-1 ${sc.border} scale-110 z-10` : 'hover:brightness-125'}`}
-                  style={{ aspectRatio: '1', minHeight: '20px' }}
+                  className={`relative rounded cursor-pointer transition-all duration-200 flex items-center justify-center villa-cell-3d ${sc.bg} ${isHovered ? `ring-1 ${sc.border} scale-110 z-10 villa-cell-3d-active` : 'hover:brightness-125'}`}
+                  style={{ aspectRatio: '1', minHeight: '22px' }}
                   onMouseEnter={() => setHoveredVilla(villa.srNo)}
                   onMouseLeave={() => setHoveredVilla(null)}
                 >
-                  <span className="text-[7px] md:text-[8px] font-bold text-white/80">{villa.srNo}</span>
+                  <span className="text-[7px] md:text-[8px] font-bold text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{villa.srNo}</span>
                 </div>
               );
             })}
@@ -273,7 +274,7 @@ export default function VillasDashboard({ onViewChange }) {
             if (!v) return null;
             const pct = v.atsValue > 0 ? ((v.received / v.atsValue) * 100).toFixed(1) : 0;
             return (
-              <div className="mt-1.5 shrink-0 bg-black/60 rounded-lg px-2.5 py-1.5 border border-white/10 text-[10px]">
+              <div className="mt-1.5 shrink-0 bg-[#0a0f1c] rounded-lg px-2.5 py-1.5 border border-white/10 text-[10px] shadow-[3px_3px_6px_#06090f,-3px_-3px_6px_#1c2941]">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-white">{v.villaNo}</span>
                   <span className={`font-bold ${getStatusColor(getPaymentStatus(v)).text}`}>{v.isSold ? `${pct}% paid` : 'Available'}</span>
@@ -289,41 +290,61 @@ export default function VillasDashboard({ onViewChange }) {
           })()}
         </div>
 
-        <div className="md:col-span-3 panel-3d rounded-xl p-2 md:p-3 flex flex-col">
-          <h2 className="text-xs md:text-sm font-semibold text-slate-300 mb-2 shrink-0 flex items-center gap-2">
-            <PieChart className="w-3.5 h-3.5 text-violet-400" /> Collection Health
-          </h2>
+        {/* Donut Chart */}
+        <div className="md:col-span-3 bg-[#121f42] rounded-xl p-2 md:p-3 flex flex-col shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),_0_5px_15px_rgba(0,0,0,0.5)] border border-white/5">
+          <div className="flex items-center justify-between shrink-0 mb-1.5 relative">
+            <h2 className="text-xs md:text-sm font-semibold text-slate-300 flex items-center gap-2 drop-shadow-sm">
+              <PieChart className="w-3 h-3 md:w-4 md:h-4 text-violet-400" /> Collection Health
+            </h2>
+            {hoveredSlice && (
+              <div className="absolute right-0 top-0 flex items-center gap-1.5 bg-black/80 px-2 py-1 rounded-md border border-white/10 z-20 shadow-lg">
+                <span className="text-slate-200 text-[10px] font-medium">{hoveredSlice.name}</span>
+                <span className="text-white text-[11px] font-bold font-mono">{formatCurrency(hoveredSlice.name === 'Collected' ? stats.totalReceived : stats.totalBalance)}</span>
+                <span className="text-[10px] font-bold" style={{color: hoveredSlice.color}}>{(hoveredSlice.pct * 100).toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
           <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-            <div className="relative w-28 h-28 md:w-36 md:h-36">
-              <svg viewBox="-10 -10 120 120" className="w-full h-full drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
+            <div className="relative w-44 h-44 md:w-60 md:h-60">
+              <svg viewBox="-10 -10 120 120" className="w-full h-full overflow-visible drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
                 {donutSlices.map((slice, idx) => {
                   const getCoords = (p) => [Math.cos(2 * Math.PI * (p - 0.25)), Math.sin(2 * Math.PI * (p - 0.25))];
                   const [startX, startY] = getCoords(slice.startPct);
                   const endPct = slice.startPct + slice.pct;
                   const safeEnd = slice.pct >= 1 ? slice.startPct + 0.999 : endPct;
                   const [endX, endY] = getCoords(safeEnd);
+                  const [midX, midY] = getCoords((slice.startPct + safeEnd) / 2);
                   const largeArc = slice.pct > 0.5 ? 1 : 0;
+                  const isHovered = hoveredSlice?.name === slice.name;
+                  const shift = isHovered ? 6 : 0;
+                  const transform = `translate(${midX * shift}, ${midY * shift})`;
                   const d = [
                     `M ${50 + startX * 44} ${50 + startY * 44}`,
                     `A 44 44 0 ${largeArc} 1 ${50 + endX * 44} ${50 + endY * 44}`,
                     `L ${50 + endX * 28} ${50 + endY * 28}`,
                     `A 28 28 0 ${largeArc} 0 ${50 + startX * 28} ${50 + startY * 28}`, 'Z'
                   ].join(' ');
-                  return <path key={idx} d={d} fill={slice.color} style={{ stroke: '#0a1128', strokeWidth: 1.5 }} />;
+                  return (
+                    <path key={idx} d={d} fill={slice.color} transform={transform}
+                      onMouseEnter={() => setHoveredSlice(slice)}
+                      onMouseLeave={() => setHoveredSlice(null)}
+                      className="cursor-pointer transition-all duration-300 ease-out"
+                      style={{ stroke: '#0a1128', strokeWidth: 1.5, opacity: isHovered ? 0.85 : 1 }} />
+                  );
                 })}
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-lg md:text-xl font-bold text-white">{stats.collectionRate.toFixed(0)}%</span>
-                <span className="text-[8px] text-slate-400">collected</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-xl md:text-2xl font-bold text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{stats.collectionRate.toFixed(0)}%</span>
+                <span className="text-[9px] text-slate-400">collected</span>
               </div>
             </div>
             <div className="flex gap-4 mt-3 text-[10px]">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 cursor-pointer" onMouseEnter={() => setHoveredSlice(donutSlices[0])} onMouseLeave={() => setHoveredSlice(null)}>
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                 <span className="text-slate-400">Collected</span>
                 <span className="font-mono font-semibold text-emerald-400">{formatCompactCurrency(stats.totalReceived)}</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 cursor-pointer" onMouseEnter={() => setHoveredSlice(donutSlices[1])} onMouseLeave={() => setHoveredSlice(null)}>
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
                 <span className="text-slate-400">Due</span>
                 <span className="font-mono font-semibold text-rose-400">{formatCompactCurrency(stats.totalBalance)}</span>
@@ -332,9 +353,10 @@ export default function VillasDashboard({ onViewChange }) {
           </div>
         </div>
 
+        {/* Priority Follow-ups */}
         <div className="md:col-span-4 panel-3d rounded-xl p-2 md:p-3 flex flex-col max-h-[420px] overflow-hidden">
-          <h2 className="text-xs md:text-sm font-semibold text-slate-300 mb-2 shrink-0 flex items-center gap-2">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Priority Follow-ups
+          <h2 className="text-xs md:text-sm font-semibold text-slate-300 mb-1.5 shrink-0 flex items-center gap-2 drop-shadow-sm">
+            <AlertTriangle className="w-3 h-3 md:w-4 md:h-4 text-amber-400" /> Priority Follow-ups
           </h2>
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
             {stats.topOutstanding.map((v, idx) => {
@@ -342,20 +364,20 @@ export default function VillasDashboard({ onViewChange }) {
               const status = getPaymentStatus(v);
               const sc = getStatusColor(status);
               return (
-                <div key={idx} className="bg-black/20 rounded-lg px-2.5 py-2 border border-white/5 hover:border-white/10 transition-colors">
+                <div key={idx} className="rounded-lg px-2.5 py-2 transition-colors followup-card-3d hover:brightness-110">
                   <div className="flex justify-between items-start mb-1">
                     <div className="min-w-0">
-                      <p className="text-[10px] md:text-[11px] font-semibold text-slate-200 truncate">{v.clientName}</p>
+                      <p className="text-[10px] md:text-xs font-semibold text-slate-200 truncate">{v.clientName}</p>
                       <p className="text-[9px] text-slate-500">{v.villaNo}</p>
                     </div>
                     <div className="text-right shrink-0 ml-2">
-                      <p className="text-[10px] md:text-[11px] font-bold font-mono text-rose-400">{formatCompactCurrency(v.balance)}</p>
+                      <p className="text-[10px] md:text-xs font-bold font-mono text-rose-400">{formatCompactCurrency(v.balance)}</p>
                       <p className="text-[9px] text-slate-500">due</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${pct >= 50 ? 'bg-emerald-500' : pct >= 25 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${pct}%` }}></div>
+                    <div className="flex-1 h-1.5 progress-track-3d rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full progress-bar-3d ${pct >= 50 ? 'bg-emerald-500' : pct >= 25 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${pct}%` }}></div>
                     </div>
                     <span className={`text-[9px] font-mono font-semibold ${sc.text}`}>{pct.toFixed(0)}%</span>
                   </div>
@@ -363,7 +385,7 @@ export default function VillasDashboard({ onViewChange }) {
               );
             })}
             {stats.zeroPayment.length > 0 && (
-              <div className="mt-1 bg-rose-500/10 rounded-lg px-2.5 py-2 border border-rose-500/20">
+              <div className="mt-1 rounded-lg px-2.5 py-2 zero-pay-card-3d">
                 <div className="flex items-center gap-1.5 mb-1">
                   <XCircle className="w-3 h-3 text-rose-400" />
                   <span className="text-[10px] font-semibold text-rose-300">Zero Payment Clients ({stats.zeroPayment.length})</span>
@@ -382,10 +404,11 @@ export default function VillasDashboard({ onViewChange }) {
         </div>
       </div>
 
+      {/* CLIENT TABLE */}
       <div className="panel-3d rounded-xl flex flex-col overflow-hidden" style={{ maxHeight: '500px' }}>
-        <div className="p-2 md:p-3 border-b border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
+        <div className="p-2 md:p-3 border-b border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-3 shrink-0">
           <h2 className="text-xs md:text-sm font-semibold text-slate-300 flex items-center gap-2">
-            <Users className="w-3.5 h-3.5 text-blue-500" /> Client Collection Details
+            <Database className="w-3 h-3 md:w-4 md:h-4 text-blue-500" /> Client Collection Details
             <span className="text-slate-400 font-medium text-[9px] md:text-[10px] ml-2 px-1.5 py-0.5 bg-black/30 rounded border border-white/10">
               {filteredVillas.length} client{filteredVillas.length !== 1 ? 's' : ''}
             </span>
@@ -405,10 +428,10 @@ export default function VillasDashboard({ onViewChange }) {
                 </button>
               ))}
             </div>
-            <div className="relative w-48">
-              <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3 h-3 md:w-4 md:h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input type="text" placeholder="Search client or villa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-7 pr-3 py-1.5 bg-[#0a0f1c] shadow-[inset_2px_2px_5px_rgba(0,0,0,0.5)] border border-white/5 rounded-lg text-xs text-white focus:outline-none" />
+                className="w-full pl-8 pr-3 py-1.5 md:py-2 bg-[#0a0f1c] shadow-[inset_2px_2px_5px_rgba(0,0,0,0.5)] border border-white/5 rounded-lg text-xs md:text-sm text-white focus:outline-none" />
             </div>
           </div>
         </div>
@@ -442,21 +465,21 @@ export default function VillasDashboard({ onViewChange }) {
                 const sc = getStatusColor(status);
                 return (
                   <tr key={idx} className="hover:bg-white/5 transition-colors">
-                    <td className="py-1.5 px-3 text-xs font-medium text-slate-300">{v.villaNo}</td>
-                    <td className="py-1.5 px-3 text-xs font-medium text-slate-200">{v.clientName}</td>
-                    <td className="py-1.5 px-3 text-right font-mono text-xs text-slate-400">{formatCurrency(v.atsValue)}</td>
-                    <td className="py-1.5 px-3 text-right font-mono text-xs text-emerald-400">{formatCurrency(v.received)}</td>
-                    <td className="py-1.5 px-3 text-right font-mono text-xs text-rose-400">{formatCurrency(v.balance)}</td>
-                    <td className="py-1.5 px-3">
+                    <td className="py-1.5 md:py-2 px-3 text-xs md:text-sm font-medium text-slate-300">{v.villaNo}</td>
+                    <td className="py-1.5 md:py-2 px-3 text-xs md:text-sm font-medium text-slate-200">{v.clientName}</td>
+                    <td className="py-1.5 md:py-2 px-3 text-right font-mono text-xs md:text-sm text-slate-400">{formatCurrency(v.atsValue)}</td>
+                    <td className="py-1.5 md:py-2 px-3 text-right font-mono text-xs md:text-sm font-medium text-emerald-400">{formatCurrency(v.received)}</td>
+                    <td className="py-1.5 md:py-2 px-3 text-right font-mono text-xs md:text-sm font-medium text-rose-400">{formatCurrency(v.balance)}</td>
+                    <td className="py-1.5 md:py-2 px-3">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full transition-all ${pct >= 50 ? 'bg-emerald-500' : pct >= 25 ? 'bg-amber-500' : pct > 0 ? 'bg-orange-500' : 'bg-rose-500'}`} style={{ width: `${Math.max(pct, 1)}%` }}></div>
+                        <div className="flex-1 h-1.5 progress-track-3d rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full progress-bar-3d transition-all ${pct >= 50 ? 'bg-emerald-500' : pct >= 25 ? 'bg-amber-500' : pct > 0 ? 'bg-orange-500' : 'bg-rose-500'}`} style={{ width: `${Math.max(pct, 1)}%` }}></div>
                         </div>
                         <span className="text-[10px] font-mono text-slate-400 w-8 text-right">{pct.toFixed(0)}%</span>
                       </div>
                     </td>
-                    <td className="py-1.5 px-3">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold ${sc.bg} ${sc.text} border ${sc.border}/30`}>
+                    <td className="py-1.5 md:py-2 px-3">
+                      <span className={`inline-flex items-center px-1.5 md:px-2 py-0.5 rounded text-[10px] md:text-xs font-medium bg-[#0a0f1c] ${sc.text}`}>
                         {sc.label.split(' ')[0]}
                       </span>
                     </td>
@@ -473,10 +496,19 @@ export default function VillasDashboard({ onViewChange }) {
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
         .bg-3d-base { background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 60%, #020617 100%); }
         .panel-3d { background: linear-gradient(145deg, #162032, #0d131f); box-shadow: 5px 5px 10px #06090f, -5px -5px 10px #1c2941; border: 1px solid rgba(255, 255, 255, 0.03); }
         .btn-3d { background: linear-gradient(145deg, #162032, #0d131f); box-shadow: 2px 2px 4px #06090f, -2px -2px 4px #1c2941; }
         .btn-3d:active { box-shadow: inset 2px 2px 4px #06090f, inset -2px -2px 4px #1c2941; }
+        .progress-track-3d { background: #06090f; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8); }
+        .progress-bar-3d { box-shadow: inset 0px 2px 3px rgba(255,255,255,0.3); }
+        .villa-cell-3d { box-shadow: 2px 2px 4px #06090f, -1px -1px 3px rgba(28,41,65,0.4), inset 0 1px 1px rgba(255,255,255,0.1); }
+        .villa-cell-3d:hover { box-shadow: 3px 3px 6px #06090f, -2px -2px 4px rgba(28,41,65,0.5), inset 0 1px 2px rgba(255,255,255,0.15); }
+        .villa-cell-3d-active { box-shadow: inset 2px 2px 4px rgba(0,0,0,0.4), inset -1px -1px 2px rgba(255,255,255,0.05) !important; }
+        .followup-card-3d { background: linear-gradient(145deg, #131d30, #0b1120); box-shadow: 3px 3px 6px #06090f, -3px -3px 6px #1c2941; border: 1px solid rgba(255,255,255,0.03); }
+        .zero-pay-card-3d { background: linear-gradient(145deg, #1a1220, #120a18); box-shadow: inset 3px 3px 6px rgba(0,0,0,0.4), inset -3px -3px 6px rgba(244,63,94,0.03); border: 1px solid rgba(244,63,94,0.2); }
       `}} />
     </div>
   );
