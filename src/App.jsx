@@ -3,7 +3,7 @@ import {
   BarChart3, ArrowUpRight, ArrowDownRight, Building2, Briefcase,
   Users, Receipt, Zap, Search, Activity, Crosshair, Database,
   Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, PieChart, Download, Upload,
-  RefreshCw, Link2, Landmark, Wallet, TrendingUp
+  RefreshCw, Link2, Landmark, Wallet, TrendingUp, Home
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -49,7 +49,7 @@ function getInitialTab() {
   return (tab && TAB_MAP[tab]) || 'INFLOW';
 }
 
-export default function Dashboard() {
+export default function Dashboard({ onViewChange }) {
   const [appData, setAppData] = useState({ revenue: {}, refunds: { totalRefunds: { name: 'Refund', total: 0 } }, expenses: {} });
   const [availablePeriods, setAvailablePeriods] = useState([]);
   const [selectedPeriods, setSelectedPeriods] = useState(new Set());
@@ -426,6 +426,14 @@ export default function Dashboard() {
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 items-center">
+          <div className="flex rounded-lg overflow-hidden border border-white/10 mr-1">
+            <button className="px-3 py-1.5 text-xs font-semibold bg-blue-500/20 text-blue-300">
+              <BarChart3 className="w-3.5 h-3.5 inline mr-1.5" />Financials
+            </button>
+            <button onClick={() => onViewChange && onViewChange('villas')} className="px-3 py-1.5 text-xs font-semibold transition-colors text-slate-400 hover:text-white hover:bg-white/5 border-l border-white/10">
+              <Home className="w-3.5 h-3.5 inline mr-1.5" />Villas
+            </button>
+          </div>
           <div className="flex gap-2">
             <input type="file" accept=".xlsx,.csv" ref={inflowFileInputRef} onChange={(e) => handleUpload(e, 'inflow')} className="hidden" />
             <input type="file" accept=".xlsx,.csv" ref={outflowFileInputRef} onChange={(e) => handleUpload(e, 'outflow')} className="hidden" />
