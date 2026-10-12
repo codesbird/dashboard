@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
-import { sheets, spreadsheetId, parseSheetToData } from '../../../lib/sheetHelpers.js';
+import { sheets, getSheetId, parseSheetToData } from '../../../lib/sheetHelpers.js';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const spreadsheetId = getSheetId();
     const [inflowRes, outflowRes] = await Promise.all([
       sheets.spreadsheets.values.get({ spreadsheetId, range: 'Inflow!A1:AZ100' }),
       sheets.spreadsheets.values.get({ spreadsheetId, range: 'Outflow!A1:AZ100' }),

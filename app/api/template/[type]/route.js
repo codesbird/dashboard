@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { sheets, spreadsheetId } from '../../../../lib/sheetHelpers.js';
+import { sheets, getSheetId } from '../../../../lib/sheetHelpers.js';
 import ExcelJS from 'exceljs';
 
 export async function GET(request, { params }) {
   try {
     const { type } = await params;
     const sheetName = type === 'inflow' ? 'Inflow' : 'Outflow';
+    const spreadsheetId = getSheetId();
 
     const sheetRes = await sheets.spreadsheets.values.get({
       spreadsheetId,

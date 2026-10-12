@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { sheets, spreadsheetId, addSumFormulas } from '../../../lib/sheetHelpers.js';
+import { sheets, getSheetId, addSumFormulas } from '../../../lib/sheetHelpers.js';
 
 export async function POST(request) {
   try {
@@ -8,6 +8,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid data format' }, { status: 400 });
     }
 
+    const spreadsheetId = getSheetId();
     await sheets.spreadsheets.values.clear({
       spreadsheetId,
       range: 'Inflow!A1:AZ100',
